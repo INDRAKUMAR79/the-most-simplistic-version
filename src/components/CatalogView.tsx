@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { CATEGORY_LABELS, PRODUCTS, SUB_NAV_ITEMS } from '../data/catalog';
-import type { CategoryId, Product } from '../types';
+import type { CartItem, CategoryId, Product } from '../types';
 import { ProductImage } from './ProductImage';
 import { StarRating } from './StarRating';
 
 interface CatalogViewProps {
+  cart: CartItem[];
   searchQuery: string;
   activeCategory: CategoryId;
   deliveryLocation: string;
@@ -15,6 +16,7 @@ interface CatalogViewProps {
 }
 
 export function CatalogView({
+  cart,
   searchQuery,
   activeCategory,
   deliveryLocation,
@@ -210,6 +212,11 @@ export function CatalogView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter-md items-stretch">
           {filteredProducts.map((product) => {
             const isAdded = addedId === product.id;
+            const inCartQty =
+              cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+            const availableQty = Math.max(0, product.stockLeft - inCartQty);
+            const outOfStock = availableQty <= 0;
+
             return (
               <article
                 key={product.id}
@@ -262,18 +269,34 @@ export function CatalogView({
                   <p className="font-body text-label-sm text-on-surface-muted">
                     {product.deliveryText} to {deliveryLocation}
                   </p>
+                  <p
+                    className={`font-label text-label-sm tabular-nums mt-0.5 ${
+                      outOfStock || availableQty <= 5
+                        ? 'text-deal-red font-medium'
+                        : 'text-success'
+                    }`}
+                  >
+                    {outOfStock
+                      ? '0 available (max in cart)'
+                      : `${availableQty} available`}
+                  </p>
                 </div>
 
                 <button
                   type="button"
+                  disabled={outOfStock}
                   onClick={() => handleAdd(product)}
-                  className={`w-full font-label text-label-sm py-1.5 px-3 rounded-full transition-colors duration-state-change cursor-pointer ${
+                  className={`w-full font-label text-label-sm py-1.5 px-3 rounded-full transition-colors duration-state-change cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                     isAdded
                       ? 'bg-success text-on-success'
                       : 'bg-tertiary text-on-tertiary hover:bg-accent'
                   }`}
                 >
-                  {isAdded ? 'Added to Cart' : 'Add to Cart'}
+                  {outOfStock
+                    ? 'Max in Cart'
+                    : isAdded
+                      ? 'Added to Cart'
+                      : 'Add to Cart'}
                 </button>
               </article>
             );

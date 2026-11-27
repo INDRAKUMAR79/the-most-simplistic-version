@@ -290,6 +290,7 @@ export default function App() {
         {showCatalogView ? (
           <div className="max-w-[1500px] w-full mx-auto">
             <CatalogView
+              cart={cart}
               searchQuery={searchQuery}
               activeCategory={activeNavCategory ?? 'all'}
               deliveryLocation={deliveryLocation}
@@ -336,6 +337,7 @@ export default function App() {
 
             <div className="max-w-[1500px] w-full mx-auto px-page-margin -mt-4 relative z-20 flex flex-col gap-gutter-lg">
               <MoodRecommendations
+                cart={cart}
                 loading={moodLoading}
                 affirmation={affirmation}
                 summary={moodSummary}
@@ -346,6 +348,7 @@ export default function App() {
               />
 
               <TodaysDealsRow
+                cart={cart}
                 onAddToCart={(product) => addToCart(product, 1)}
                 onOpenProduct={setSelectedProduct}
                 onSelectCategory={handleSelectCategory}

@@ -15,6 +15,34 @@ interface CartDrawerProps {
   onOpenProduct: (product: Product) => void;
 }
 
+const DELIVERY_TIME_SLOTS = [
+  '09:00 AM – 12:00 PM',
+  '12:00 PM – 03:00 PM',
+  '03:00 PM – 06:00 PM',
+  '06:00 PM – 09:00 PM',
+];
+
+function getLocalDateString(offsetDays = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatReadableDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  if (!year || !month || !day) return isoDate;
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-SG', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 export function CartDrawer({
   isOpen,
   cart,
@@ -31,9 +59,19 @@ export function CartDrawer({
   const [address, setAddress] = useState(
     deliveryLocation.replace('Singapore ', ''),
   );
-  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
+  const [preferredDate, setPreferredDate] = useState(() =>
+    getLocalDateString(1),
+  );
+  const [preferredTime, setPreferredTime] = useState(DELIVERY_TIME_SLOTS[0]);
+  const [lastOrder, setLastOrder] = useState<{
+    id: string;
+    preferredDate: string;
+    preferredTime: string;
+  } | null>(null);
 
   if (!isOpen) return null;
+
+  const minDate = getLocalDateString(0);
 
   const lineItems = cart
     .map((item) => {
@@ -57,6 +95,8 @@ export function CartDrawer({
     const orderId = `SG-${Math.floor(100 + Math.random() * 899)}-${Math.floor(
       1000000 + Math.random() * 8999999,
     )}`;
+    const formattedDate = formatReadableDate(preferredDate);
+
     onPlaceOrder({
       id: orderId,
       date: new Date().toLocaleDateString('en-SG', {
@@ -67,6 +107,8 @@ export function CartDrawer({
       status: 'Confirmed — Preparing shipment',
       total: grandTotal,
       address: `${recipient.trim() || 'Shopper'}, Singapore ${address.trim() || '238801'}`,
+      preferredDate: formattedDate,
+      preferredTime,
       items: lineItems.map(({ product, quantity }) => ({
         productId: product.id,
         title: product.title,
@@ -75,7 +117,11 @@ export function CartDrawer({
         quantity,
       })),
     });
-    setLastOrderId(orderId);
+    setLastOrder({
+      id: orderId,
+      preferredDate: formattedDate,
+      preferredTime,
+    });
     setStep('done');
   };
 
@@ -92,7 +138,9 @@ export function CartDrawer({
       >
         <div className="bg-primary text-on-primary px-gutter-lg py-gutter-md flex items-center justify-between">
           <h2 className="font-headline text-title-md">
-            Shopping Cart ({totalCount})
+            {step === 'checkout'
+              ? 'Checkout'
+              : `Shopping Cart (${totalCount})`}
           </h2>
           <button
             type="button"
@@ -108,7 +156,7 @@ export function CartDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto p-gutter-lg flex flex-col gap-gutter-md">
-          {step === 'done' ? (
+          {step === 'done' && lastOrder ? (
             <div className="bg-surface-subtle border border-outline rounded-sm p-gutter-lg flex flex-col items-center text-center gap-gutter-md">
               <span
                 className="material-symbols-outlined text-display-lg text-success"
@@ -120,9 +168,17 @@ export function CartDrawer({
                 Order Placed
               </h3>
               <p className="font-body text-body-sm text-on-surface-muted">
-                Order <span className="font-mono font-semibold">{lastOrderId}</span>{' '}
+                Order <span className="font-mono font-semibold">{lastOrder.id}</span>{' '}
                 is confirmed for delivery to {deliveryLocation}.
               </p>
+              <div className="w-full bg-surface-card border border-outline rounded-sm p-gutter-md text-left flex flex-col gap-1">
+                <span className="font-label text-label-sm text-on-surface-muted">
+                  Preferred Delivery Date &amp; Time
+                </span>
+                <span className="font-body text-body-sm font-semibold text-on-surface-card">
+                  {lastOrder.preferredDate} &middot; {lastOrder.preferredTime}
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -162,10 +218,14 @@ export function CartDrawer({
                 &larr; Back to cart
               </button>
               <div className="flex flex-col gap-1">
-                <label className="font-label text-label-sm text-on-surface-card">
+                <label
+                  htmlFor="checkout-recipient"
+                  className="font-label text-label-sm text-on-surface-card"
+                >
                   Recipient Name
                 </label>
                 <input
+                  id="checkout-recipient"
                   type="text"
                   required
                   value={recipient}
@@ -174,16 +234,59 @@ export function CartDrawer({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="font-label text-label-sm text-on-surface-card">
+                <label
+                  htmlFor="checkout-address"
+                  className="font-label text-label-sm text-on-surface-card"
+                >
                   Singapore Postal Code / Street
                 </label>
                 <input
+                  id="checkout-address"
                   type="text"
                   required
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
                   className="border border-outline rounded-sm px-3 py-2 font-body text-body-sm"
                 />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter-sm">
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="checkout-preferred-date"
+                    className="font-label text-label-sm text-on-surface-card"
+                  >
+                    Preferred Delivery Date
+                  </label>
+                  <input
+                    id="checkout-preferred-date"
+                    type="date"
+                    required
+                    min={minDate}
+                    value={preferredDate}
+                    onChange={(event) => setPreferredDate(event.target.value)}
+                    className="border border-outline rounded-sm px-3 py-2 font-body text-body-sm bg-surface-card"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="checkout-preferred-time"
+                    className="font-label text-label-sm text-on-surface-card"
+                  >
+                    Preferred Delivery Time
+                  </label>
+                  <select
+                    id="checkout-preferred-time"
+                    value={preferredTime}
+                    onChange={(event) => setPreferredTime(event.target.value)}
+                    className="border border-outline rounded-sm px-3 py-2 font-body text-body-sm bg-surface-card cursor-pointer"
+                  >
+                    {DELIVERY_TIME_SLOTS.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="bg-surface-subtle border border-outline rounded-sm p-gutter-md flex flex-col gap-1 text-body-sm tabular-nums">
                 <div className="flex justify-between">
@@ -194,6 +297,12 @@ export function CartDrawer({
                   <span>Delivery:</span>
                   <span>
                     {shippingFee === 0 ? 'FREE' : `S$${shippingFee.toFixed(2)}`}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2 text-label-sm text-on-surface-muted pt-1">
+                  <span className="shrink-0">Preferred Date &amp; Time:</span>
+                  <span className="text-right font-medium text-on-surface-card">
+                    {formatReadableDate(preferredDate)}, {preferredTime}
                   </span>
                 </div>
                 <div className="flex justify-between font-headline text-title-md border-t border-outline pt-2 mt-1">
@@ -209,66 +318,83 @@ export function CartDrawer({
               </button>
             </form>
           ) : (
-            lineItems.map(({ product, quantity }) => (
-              <div
-                key={product.id}
-                className="border border-outline rounded-sm p-gutter-md flex gap-3"
-              >
-                <button
-                  type="button"
-                  onClick={() => onOpenProduct(product)}
-                  className="w-20 h-20 bg-surface-subtle rounded-sm p-2 shrink-0 flex items-center justify-center cursor-pointer"
+            lineItems.map(({ product, quantity }) => {
+              const remainingAvailable = Math.max(0, product.stockLeft - quantity);
+              const atMaxStock = remainingAvailable <= 0;
+
+              return (
+                <div
+                  key={product.id}
+                  className="border border-outline rounded-sm p-gutter-md flex gap-3"
                 >
-                  <ProductImage
-                    src={product.image}
-                    alt={product.imageAlt}
-                    className="w-full h-full object-contain"
-                  />
-                </button>
-                <div className="flex-1 min-w-0 flex flex-col gap-1">
                   <button
                     type="button"
                     onClick={() => onOpenProduct(product)}
-                    className="text-left font-body text-body-sm font-semibold text-on-surface-card line-clamp-2 hover:text-secondary cursor-pointer"
+                    className="w-20 h-20 bg-surface-subtle rounded-sm p-2 shrink-0 flex items-center justify-center cursor-pointer"
                   >
-                    {product.title}
+                    <ProductImage
+                      src={product.image}
+                      alt={product.imageAlt}
+                      className="w-full h-full object-contain"
+                    />
                   </button>
-                  <span className="font-headline text-title-md tabular-nums">
-                    S${product.price.toFixed(2)}
-                  </span>
-                  <div className="flex items-center gap-3 mt-1">
-                    <div className="flex items-center border border-outline rounded-sm">
-                      <button
-                        type="button"
-                        aria-label="Decrease quantity"
-                        onClick={() => onUpdateQty(product.id, quantity - 1)}
-                        className="px-2 py-0.5 hover:bg-surface-subtle cursor-pointer"
-                      >
-                        -
-                      </button>
-                      <span className="px-2 font-label text-label-sm tabular-nums">
-                        {quantity}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label="Increase quantity"
-                        onClick={() => onUpdateQty(product.id, quantity + 1)}
-                        className="px-2 py-0.5 hover:bg-surface-subtle cursor-pointer"
-                      >
-                        +
-                      </button>
-                    </div>
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
                     <button
                       type="button"
-                      onClick={() => onRemoveItem(product.id)}
-                      className="font-label text-label-sm text-secondary hover:underline cursor-pointer"
+                      onClick={() => onOpenProduct(product)}
+                      className="text-left font-body text-body-sm font-semibold text-on-surface-card line-clamp-2 hover:text-secondary cursor-pointer"
                     >
-                      Delete
+                      {product.title}
                     </button>
+                    <span className="font-headline text-title-md tabular-nums">
+                      S${product.price.toFixed(2)}
+                    </span>
+                    <span
+                      className={`font-label text-label-sm tabular-nums ${
+                        atMaxStock || remainingAvailable <= 3
+                          ? 'text-deal-red font-medium'
+                          : 'text-success'
+                      }`}
+                    >
+                      {atMaxStock
+                        ? '0 still available (max in cart)'
+                        : `${remainingAvailable} still available`}
+                    </span>
+                    <div className="flex items-center gap-3 mt-1">
+                      <div className="flex items-center border border-outline rounded-sm">
+                        <button
+                          type="button"
+                          aria-label="Decrease quantity"
+                          onClick={() => onUpdateQty(product.id, quantity - 1)}
+                          className="px-2 py-0.5 hover:bg-surface-subtle cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <span className="px-2 font-label text-label-sm tabular-nums">
+                          {quantity}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={atMaxStock}
+                          aria-label="Increase quantity"
+                          onClick={() => onUpdateQty(product.id, quantity + 1)}
+                          className="px-2 py-0.5 hover:bg-surface-subtle cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveItem(product.id)}
+                        className="font-label text-label-sm text-secondary hover:underline cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 

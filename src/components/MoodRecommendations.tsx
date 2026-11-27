@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import type { MoodRecommendation, Product } from '../types';
+import type { CartItem, MoodRecommendation, Product } from '../types';
 import { ProductImage } from './ProductImage';
 import { StarRating } from './StarRating';
 
 interface MoodRecommendationsProps {
+  cart: CartItem[];
   loading: boolean;
   affirmation: string | null;
   summary: string | null;
@@ -14,6 +15,7 @@ interface MoodRecommendationsProps {
 }
 
 export function MoodRecommendations({
+  cart,
   loading,
   affirmation,
   summary,
@@ -95,6 +97,11 @@ export function MoodRecommendations({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter-md items-stretch">
             {results.map(({ product, reason }) => {
               const isAdded = addedId === product.id;
+              const inCartQty =
+                cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+              const availableQty = Math.max(0, product.stockLeft - inCartQty);
+              const outOfStock = availableQty <= 0;
+
               return (
                 <article
                   key={product.id}
@@ -147,18 +154,35 @@ export function MoodRecommendations({
                         </span>
                       )}
                     </div>
+
+                    <p
+                      className={`font-label text-label-sm tabular-nums mt-1 ${
+                        outOfStock || availableQty <= 5
+                          ? 'text-deal-red font-medium'
+                          : 'text-success'
+                      }`}
+                    >
+                      {outOfStock
+                        ? '0 available (max in cart)'
+                        : `${availableQty} available`}
+                    </p>
                   </div>
 
                   <button
                     type="button"
+                    disabled={outOfStock}
                     onClick={() => handleAdd(product)}
-                    className={`w-full font-label text-label-sm py-1.5 px-3 rounded-full transition-colors duration-state-change cursor-pointer ${
+                    className={`w-full font-label text-label-sm py-1.5 px-3 rounded-full transition-colors duration-state-change cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                       isAdded
                         ? 'bg-success text-on-success'
                         : 'bg-tertiary text-on-tertiary hover:bg-accent'
                     }`}
                   >
-                    {isAdded ? 'Added to Cart' : 'Add to Cart'}
+                    {outOfStock
+                      ? 'Max in Cart'
+                      : isAdded
+                        ? 'Added to Cart'
+                        : 'Add to Cart'}
                   </button>
                 </article>
               );

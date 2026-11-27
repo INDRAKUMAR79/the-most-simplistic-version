@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react';
 import { PRODUCTS } from '../data/catalog';
-import type { CategoryId, Product } from '../types';
+import type { CartItem, CategoryId, Product } from '../types';
 import { ProductImage } from './ProductImage';
 
 interface TodaysDealsRowProps {
+  cart: CartItem[];
   onAddToCart: (product: Product) => void;
   onOpenProduct: (product: Product) => void;
   onSelectCategory: (category: CategoryId | null) => void;
 }
 
 export function TodaysDealsRow({
+  cart,
   onAddToCart,
   onOpenProduct,
   onSelectCategory,
@@ -54,6 +56,11 @@ export function TodaysDealsRow({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-gutter-md items-stretch">
         {topFiveDeals.map((product) => {
           const isAdded = addedId === product.id;
+          const inCartQty =
+            cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+          const availableQty = Math.max(0, product.stockLeft - inCartQty);
+          const outOfStock = availableQty <= 0;
+
           return (
             <article
               key={product.id}
@@ -116,18 +123,34 @@ export function TodaysDealsRow({
                 <p className="font-label text-label-sm text-success mt-0.5">
                   {product.deliveryText}
                 </p>
+                <p
+                  className={`font-label text-label-sm tabular-nums mt-0.5 ${
+                    outOfStock || availableQty <= 5
+                      ? 'text-deal-red font-medium'
+                      : 'text-on-surface-muted'
+                  }`}
+                >
+                  {outOfStock
+                    ? '0 available (max in cart)'
+                    : `${availableQty} available`}
+                </p>
               </div>
 
               <button
                 type="button"
+                disabled={outOfStock}
                 onClick={() => handleAdd(product)}
-                className={`w-full font-label text-label-sm py-1.5 px-3 rounded-full transition-colors duration-state-change cursor-pointer ${
+                className={`w-full font-label text-label-sm py-1.5 px-3 rounded-full transition-colors duration-state-change cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                   isAdded
                     ? 'bg-success text-on-success'
                     : 'bg-tertiary text-on-tertiary hover:bg-accent'
                 }`}
               >
-                {isAdded ? 'Added to Cart' : 'Add to Cart'}
+                {outOfStock
+                  ? 'Max in Cart'
+                  : isAdded
+                    ? 'Added to Cart'
+                    : 'Add to Cart'}
               </button>
             </article>
           );

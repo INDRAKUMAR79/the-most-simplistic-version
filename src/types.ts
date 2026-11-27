@@ -54,6 +54,8 @@ export interface Order {
   status: string;
   total: number;
   address: string;
+  preferredDate?: string;
+  preferredTime?: string;
   items: OrderItem[];
 }
 

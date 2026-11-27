@@ -457,9 +457,17 @@ export function OrdersModal({
                 </div>
               </div>
               <div className="p-gutter-md flex flex-col gap-3">
-                <p className="font-label text-label-sm text-success">
-                  {order.status} &middot; {order.address}
-                </p>
+                <div>
+                  <p className="font-label text-label-sm text-success">
+                    {order.status} &middot; {order.address}
+                  </p>
+                  {order.preferredDate && order.preferredTime && (
+                    <p className="font-body text-label-sm text-on-surface-muted mt-0.5">
+                      Preferred Delivery: {order.preferredDate} &middot;{' '}
+                      {order.preferredTime}
+                    </p>
+                  )}
+                </div>
                 {order.items.map((item) => (
                   <div
                     key={item.productId}
