@@ -15,6 +15,7 @@ import type {
 import { Header } from './components/Header';
 import { MoodBar } from './components/MoodBar';
 import { MoodRecommendations } from './components/MoodRecommendations';
+import { TodaysDealsRow } from './components/TodaysDealsRow';
 import { CatalogView } from './components/CatalogView';
 import { ProductModal } from './components/ProductModal';
 import { CartDrawer } from './components/CartDrawer';
@@ -322,6 +323,12 @@ export default function App() {
               onAddToCart={(product) => addToCart(product, 1)}
               onOpenProduct={setSelectedProduct}
               onClear={handleClearMood}
+            />
+
+            <TodaysDealsRow
+              onAddToCart={(product) => addToCart(product, 1)}
+              onOpenProduct={setSelectedProduct}
+              onSelectCategory={handleSelectCategory}
             />
           </div>
         )}
