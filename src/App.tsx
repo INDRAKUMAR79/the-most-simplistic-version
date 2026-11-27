@@ -310,7 +310,7 @@ export default function App() {
                 alt=""
                 aria-hidden="true"
                 referrerPolicy="no-referrer"
-                className="absolute inset-0 w-full h-full object-cover object-center blur-md scale-110 pointer-events-none select-none"
+                className="absolute inset-0 w-full h-full object-cover object-center blur-[1.5px] scale-[1.02] pointer-events-none select-none"
               />
               <div
                 className="absolute inset-0 bg-primary/20 pointer-events-none"
