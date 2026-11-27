@@ -129,6 +129,126 @@ app.post('/api/mood-recommendations', async (req, res) => {
   }
 });
 
+app.post('/api/shopper-chat', async (req, res) => {
+  const rawMessages = Array.isArray(req.body?.messages) ? req.body.messages : [];
+  const deliveryLocation =
+    typeof req.body?.deliveryLocation === 'string' && req.body.deliveryLocation.trim()
+      ? req.body.deliveryLocation.trim()
+      : 'Singapore';
+  const cartSummary = Array.isArray(req.body?.cartSummary)
+    ? req.body.cartSummary
+    : [];
+
+  const sanitizedMessages = rawMessages
+    .filter(
+      (msg: unknown): msg is { role: 'user' | 'model'; text: string } =>
+        Boolean(
+          msg &&
+            typeof msg === 'object' &&
+            ((msg as { role?: unknown }).role === 'user' ||
+              (msg as { role?: unknown }).role === 'model') &&
+            typeof (msg as { text?: unknown }).text === 'string' &&
+            (msg as { text: string }).text.trim().length > 0,
+        ),
+    )
+    .slice(-12);
+
+  if (sanitizedMessages.length === 0) {
+    res.status(400).json({ error: 'Please enter a shopping question.' });
+    return;
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({
+      error: 'GEMINI_API_KEY is not configured in Settings > Secrets.',
+    });
+    return;
+  }
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    });
+
+    const catalogData = PRODUCTS.map((p) => ({
+      id: p.id,
+      title: p.title,
+      brand: p.brand,
+      category: p.category,
+      priceSGD: p.price,
+      originalPriceSGD: p.originalPrice ?? null,
+      discountPercent: p.discountPercent ?? null,
+      stockLeft: p.stockLeft,
+      isDeal: Boolean(p.isDeal),
+      isPrime: p.isPrime,
+      deliveryText: p.deliveryText,
+      description: p.description,
+    }));
+
+    const conversationText = sanitizedMessages
+      .map(
+        (m: { role: 'user' | 'model'; text: string }) =>
+          `${m.role === 'user' ? 'Customer' : 'Assistant'}: ${m.text.trim()}`,
+      )
+      .join('\n');
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-4-hydrogen',
+      contents: `Customer delivery location: ${deliveryLocation}\nCustomer cart: ${JSON.stringify(cartSummary)}\n\nCatalog:\n${JSON.stringify(catalogData)}\n\nConversation:\n${conversationText}`,
+      config: {
+        systemInstruction:
+          'You are the Amazon.sg Live Shopper Assistant. Answer concisely and helpfully using only the provided catalog data, Singapore delivery slots (09:00 AM - 12:00 PM, 12:00 PM - 03:00 PM, 03:00 PM - 06:00 PM, 06:00 PM - 09:00 PM), Prime 1-day delivery / S$40 free standard delivery rules, and Amazon Fresh 2-hour delivery rules. Quote prices in S$ and exact stock counts from the catalog. Include up to 3 relevant product IDs in suggestedProductIds when products match the query.',
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            reply: {
+              type: Type.STRING,
+              description: 'Helpful, concise reply to the customer question.',
+            },
+            suggestedProductIds: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: 'Up to 3 matching product IDs from the provided catalog.',
+            },
+          },
+          required: ['reply', 'suggestedProductIds'],
+        },
+      },
+    });
+
+    const parsed = JSON.parse((response.text ?? '{}').trim());
+    const validIds = new Set(PRODUCTS.map((p) => p.id));
+    const suggestedProductIds = Array.isArray(parsed.suggestedProductIds)
+      ? parsed.suggestedProductIds
+          .filter(
+            (id: unknown): id is string =>
+              typeof id === 'string' && validIds.has(id),
+          )
+          .slice(0, 3)
+      : [];
+
+    res.json({
+      reply:
+        typeof parsed.reply === 'string' && parsed.reply.trim()
+          ? parsed.reply.trim()
+          : 'Here is what I found for you on Amazon.sg.',
+      suggestedProductIds,
+    });
+  } catch (err) {
+    console.error('Shopper chat error:', err);
+    res.status(502).json({
+      error: 'Could not reach the live assistant right now. Please try again.',
+    });
+  }
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');

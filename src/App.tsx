@@ -20,6 +20,7 @@ import { CatalogView } from './components/CatalogView';
 import { ProductModal } from './components/ProductModal';
 import { CartDrawer } from './components/CartDrawer';
 import { Footer } from './components/Footer';
+import { LiveShopperChat } from './components/LiveShopperChat';
 import {
   AuthModal,
   InfoModal,
@@ -434,6 +435,14 @@ export default function App() {
         title={infoModal.title}
         body={infoModal.body}
         onClose={() => setInfoModal({ title: null, body: '' })}
+      />
+
+      <LiveShopperChat
+        deliveryLocation={deliveryLocation}
+        cart={cart}
+        isCartOpen={isCartOpen}
+        onOpenProduct={setSelectedProduct}
+        onAddToCart={(product) => addToCart(product, 1)}
       />
     </div>
   );
