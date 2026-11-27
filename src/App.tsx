@@ -286,51 +286,72 @@ export default function App() {
         onOpenPrimeModal={() => setIsPrimeOpen(true)}
       />
 
-      <main
-        id="top"
-        className="flex-1 max-w-[1500px] w-full mx-auto pb-gutter-xl"
-      >
+      <main id="top" className="flex-1 w-full pb-gutter-xl">
         {showCatalogView ? (
-          <CatalogView
-            searchQuery={searchQuery}
-            activeCategory={activeNavCategory ?? 'all'}
-            deliveryLocation={deliveryLocation}
-            onSelectCategory={handleSelectCategory}
-            onClearSearch={() => setSearchQuery('')}
-            onAddToCart={(product) => addToCart(product, 1)}
-            onOpenProduct={setSelectedProduct}
-          />
-        ) : (
-          <div className="px-page-margin py-10 md:py-14 flex flex-col items-center gap-gutter-lg">
-            <div className="w-full max-w-[460px]">
-              <MoodBar
-                moodInput={moodInput}
-                loading={moodLoading}
-                errorMsg={moodError}
-                affirmation={affirmation}
-                hasResults={moodResults.length > 0}
-                onChangeMood={setMoodInput}
-                onSubmitMood={(mood) => void handleSubmitMood(mood)}
-                onClear={handleClearMood}
-              />
-            </div>
-
-            <MoodRecommendations
-              loading={moodLoading}
-              affirmation={affirmation}
-              summary={moodSummary}
-              results={moodResults}
-              onAddToCart={(product) => addToCart(product, 1)}
-              onOpenProduct={setSelectedProduct}
-              onClear={handleClearMood}
-            />
-
-            <TodaysDealsRow
-              onAddToCart={(product) => addToCart(product, 1)}
-              onOpenProduct={setSelectedProduct}
+          <div className="max-w-[1500px] w-full mx-auto">
+            <CatalogView
+              searchQuery={searchQuery}
+              activeCategory={activeNavCategory ?? 'all'}
+              deliveryLocation={deliveryLocation}
               onSelectCategory={handleSelectCategory}
+              onClearSearch={() => setSearchQuery('')}
+              onAddToCart={(product) => addToCart(product, 1)}
+              onOpenProduct={setSelectedProduct}
             />
           </div>
+        ) : (
+          <>
+            <section
+              aria-label="Mood discovery backdrop"
+              className="relative w-full overflow-hidden py-12 md:py-16 px-page-margin"
+            >
+              <img
+                src="/src/assets/images/mood_backdrop_1795761163974.jpg"
+                alt=""
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-center blur-md scale-110 pointer-events-none select-none"
+              />
+              <div
+                className="absolute inset-0 bg-primary/20 pointer-events-none"
+                aria-hidden="true"
+              />
+              <div
+                className="absolute inset-0 bg-gradient-to-t from-surface via-surface/35 to-transparent pointer-events-none"
+                aria-hidden="true"
+              />
+              <div className="relative z-10 max-w-[460px] w-full mx-auto">
+                <MoodBar
+                  moodInput={moodInput}
+                  loading={moodLoading}
+                  errorMsg={moodError}
+                  affirmation={affirmation}
+                  hasResults={moodResults.length > 0}
+                  onChangeMood={setMoodInput}
+                  onSubmitMood={(mood) => void handleSubmitMood(mood)}
+                  onClear={handleClearMood}
+                />
+              </div>
+            </section>
+
+            <div className="max-w-[1500px] w-full mx-auto px-page-margin -mt-4 relative z-20 flex flex-col gap-gutter-lg">
+              <MoodRecommendations
+                loading={moodLoading}
+                affirmation={affirmation}
+                summary={moodSummary}
+                results={moodResults}
+                onAddToCart={(product) => addToCart(product, 1)}
+                onOpenProduct={setSelectedProduct}
+                onClear={handleClearMood}
+              />
+
+              <TodaysDealsRow
+                onAddToCart={(product) => addToCart(product, 1)}
+                onOpenProduct={setSelectedProduct}
+                onSelectCategory={handleSelectCategory}
+              />
+            </div>
+          </>
         )}
       </main>
 
