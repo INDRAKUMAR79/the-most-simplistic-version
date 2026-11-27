@@ -1,0 +1,8 @@
+{
+  "name": "Amazon.sg",
+  "description": "Amazon.sg storefront featuring Search Bar and Mood Bar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
